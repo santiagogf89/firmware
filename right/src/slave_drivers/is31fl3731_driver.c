@@ -3,13 +3,6 @@
 #include "slave_scheduler.h"
 #include "led_display.h"
 
-enum {
-    PhaseSequenceRequest_Init = 1 << 0,
-    PhaseSequenceRequest_UpdateLeds = 1 << 1,
-    PhaseSequenceRequest_DisableLeds = 1 << 2,
-    PhaseSequenceRequest_EnableLeds = 1 << 3
-};
-
 uint8_t KeyBacklightBrightness = 0xff;
 uint8_t LedDriverValues[LED_DRIVER_MAX_COUNT][LED_DRIVER_LED_COUNT];
 
@@ -98,17 +91,17 @@ static uint8_t updatePwmRegistersBuffer[PWM_REGISTER_BUFFER_LENGTH];
 
 void LedSlaveDriver_DisableLeds(uint8_t ledDriverId)
 {
-    ledDriverStates[ledDriverId].phaseSequenceRequests |= PhaseSequenceRequest_DisableLeds;
+    ledDriverStates[ledDriverId].requests[LedDriverRequest_DisableLeds] = true;
 }
 
 void LedSlaveDriver_EnableLeds(uint8_t ledDriverId)
 {
-    // ledDriverStates[ledDriverId].phaseSequenceRequests |= PhaseSequenceRequest_EnableLeds;
+    // ledDriverStates[ledDriverId].requests[LedDriverRequest_EnableLeds] = true;
 }
 
 void LedSlaveDriver_UpdateLeds(uint8_t ledDriverId)
 {
-    ledDriverStates[ledDriverId].phaseSequenceRequests |= PhaseSequenceRequest_UpdateLeds;
+    ledDriverStates[ledDriverId].requests[LedDriverRequest_UpdateLeds] = true;
 }
 
 void LedSlaveDriver_Init(uint8_t ledDriverId)
@@ -120,7 +113,7 @@ void LedSlaveDriver_Init(uint8_t ledDriverId)
     led_driver_state_t *currentLedDriverState = ledDriverStates + ledDriverId;
     currentLedDriverState->ledIndex = 0;
     memset(LedDriverValues[ledDriverId], KeyBacklightBrightness, LED_DRIVER_LED_COUNT);
-    ledDriverStates[ledDriverId].phaseSequenceRequests |= PhaseSequenceRequest_Init;
+    ledDriverStates[ledDriverId].requests[LedDriverRequest_Init] = true;
 }
 
 status_t LedSlaveDriver_Update(uint8_t ledDriverId)
@@ -195,21 +188,31 @@ status_t LedSlaveDriver_Update(uint8_t ledDriverId)
                 currentLedDriverState->phase = LedDriverPhase_Idle;
             }
             break;
-        case LedDriverPhase_Idle:
-            if (currentLedDriverState->phaseSequenceRequests & PhaseSequenceRequest_Init) {
-                currentLedDriverState->phase = LedDriverPhase_SetFunctionFrameInit;
-                currentLedDriverState->phaseSequenceRequests &= ~PhaseSequenceRequest_Init;
-            } else if (currentLedDriverState->phaseSequenceRequests & PhaseSequenceRequest_EnableLeds) {
-                currentLedDriverState->phase = LedDriverPhase_SetFunctionFrameEnableLeds;
-                currentLedDriverState->phaseSequenceRequests &= ~PhaseSequenceRequest_EnableLeds;
-            } else if (currentLedDriverState->phaseSequenceRequests & PhaseSequenceRequest_DisableLeds) {
-                currentLedDriverState->phase = LedDriverPhase_SetFunctionFrameDisableLeds;
-                currentLedDriverState->phaseSequenceRequests &= ~PhaseSequenceRequest_DisableLeds;
-            } else if (currentLedDriverState->phaseSequenceRequests & PhaseSequenceRequest_UpdateLeds) {
-                currentLedDriverState->phase = LedDriverPhase_UpdateChangedLedValuesUpdateLeds;
-                currentLedDriverState->phaseSequenceRequests &= ~PhaseSequenceRequest_UpdateLeds;
+        case LedDriverPhase_Idle: {
+            uint8_t i;
+
+            for (i = 0; i <= LedDriverRequest_Last; i++) {
+                if (currentLedDriverState->requests[i]) {
+                    currentLedDriverState->requests[i] = false;
+                    break;
+                }
+            }
+            switch (i) {
+                case LedDriverRequest_Init:
+                    currentLedDriverState->phase = LedDriverPhase_SetFunctionFrameInit;
+                    break;
+                case LedDriverRequest_EnableLeds:
+                    currentLedDriverState->phase = LedDriverPhase_SetFunctionFrameEnableLeds;
+                    break;
+                case LedDriverRequest_DisableLeds:
+                    currentLedDriverState->phase = LedDriverPhase_SetFunctionFrameDisableLeds;
+                    break;
+                case LedDriverRequest_UpdateLeds:
+                    currentLedDriverState->phase = LedDriverPhase_UpdateChangedLedValuesUpdateLeds;
+                    break;
             }
             break;
+        }
         case LedDriverPhase_UpdateChangedLedValuesUpdateLeds: {
             uint8_t *targetLedValues = currentLedDriverState->targetLedValues;
 

@@ -20,6 +20,14 @@
 
 // Typedefs:
 
+    enum {
+        LedDriverRequest_Init,
+        LedDriverRequest_EnableLeds,
+        LedDriverRequest_DisableLeds,
+        LedDriverRequest_UpdateLeds,
+        LedDriverRequest_Last = LedDriverRequest_UpdateLeds
+    };
+
     typedef enum {
         LedDriverId_Right,
         LedDriverId_Left,
@@ -51,7 +59,7 @@
     } led_driver_phase_t;
 
     typedef struct {
-        volatile uint8_t phaseSequenceRequests;
+        volatile bool requests[LedDriverRequest_Last + 1];
         volatile led_driver_phase_t phase;
         volatile uint8_t targetLedValues[LED_DRIVER_LED_COUNT];
         volatile uint8_t ledIndex;
