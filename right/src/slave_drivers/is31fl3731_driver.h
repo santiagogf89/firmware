@@ -30,15 +30,31 @@
         LedDriverPhase_SetFunctionFrame,
         LedDriverPhase_SetShutdownModeNormal,
         LedDriverPhase_SetFrame1,
+        LedDriverPhase_SetFrame2,
+        LedDriverPhase_SetFrame8,
+        LedDriverPhase_InitAutoPlayControlRegister1,
+        LedDriverPhase_InitAutoPlayControlRegister2,
+        LedDriverPhase_InitBreathControlRegister1,
+        LedDriverPhase_InitBreathControlRegister2,
         LedDriverPhase_InitLedControlRegisters,
         LedDriverPhase_InitLedValues,
         LedDriverPhase_UpdateChangedLedValues,
+        LedDriverPhase_SetConfigurationRegisterFadeOut,
+        LedDriverPhase_SetConfigurationRegisterFadeIn,
+        LedDriverPhase_InitLedControlRegistersZero
     } led_driver_phase_t;
 
     typedef struct {
-        led_driver_phase_t phase;
-        uint8_t targetLedValues[LED_DRIVER_LED_COUNT];
-        uint8_t ledIndex;
+        led_driver_phase_t *phases;
+        uint8_t phaseCount;
+    } led_driver_phase_sequence_t;
+
+    typedef struct {
+        const led_driver_phase_sequence_t *volatile phaseSequence;
+        volatile uint8_t phaseSequenceRequests;
+        volatile uint8_t phaseSequenceIndex;
+        volatile uint8_t targetLedValues[LED_DRIVER_LED_COUNT];
+        volatile uint8_t ledIndex;
         uint8_t i2cAddress;
         uint8_t setupLedControlRegistersCommand[LED_CONTROL_REGISTERS_COMMAND_LENGTH];
     } led_driver_state_t;
@@ -50,8 +66,9 @@
 
 // Functions:
 
-    void LedSlaveDriver_DisableLeds(void);
-    void LedSlaveDriver_UpdateLeds(void);
+    void LedSlaveDriver_DisableLeds(uint8_t ledDriverId);
+    void LedSlaveDriver_EnableLeds(uint8_t ledDriverId);
+    void LedSlaveDriver_UpdateLeds(uint8_t ledDriverId);
     void LedSlaveDriver_Init(uint8_t ledDriverId);
     status_t LedSlaveDriver_Update(uint8_t ledDriverId);
 

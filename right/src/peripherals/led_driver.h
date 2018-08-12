@@ -16,8 +16,13 @@
     #define LED_DRIVER_SDB_CLOCK kCLOCK_PortA
     #define LED_DRIVER_SDB_PIN   2
 
-    #define LED_DRIVER_REGISTER_SHUTDOWN 0x0A
-    #define LED_DRIVER_REGISTER_FRAME    0xFD
+    #define LED_DRIVER_REGISTER_SHUTDOWN            0x0A
+    #define LED_DRIVER_REGISTER_FRAME               0xFD
+    #define LED_DRIVER_REGISTER_CONFIGURATION       0x00
+    #define LED_DRIVER_REGISTER_AUTO_PLAY_CONTROL_1 0x02
+    #define LED_DRIVER_REGISTER_AUTO_PLAY_CONTROL_2 0x03
+    #define LED_DRIVER_REGISTER_BREATH_CONTROL_1    0x08
+    #define LED_DRIVER_REGISTER_BREATH_CONTROL_2    0x09
 
     #define LED_DRIVER_FRAME_1 0
     #define LED_DRIVER_FRAME_2 1
@@ -41,6 +46,25 @@
 
     #define SHUTDOWN_MODE_SHUTDOWN 0
     #define SHUTDOWN_MODE_NORMAL   1
+
+    #define DISPLAY_MODE_AUTO_FRAME_PLAY 0b01
+    #define DISPLAY_MODE_SHIFT 3
+    #define FRAME_START_1 0b000
+    #define FRAME_START_8 0b111
+
+    #define PLAY_LOOP_NUMBER_1 0b001
+    #define PLAY_LOOP_NUMBER_SHIFT 4
+    #define PLAY_FRAME_NUMBER_1 0b001
+
+    #define FRAME_DELAY_TIME 1
+
+    #define FADE_OUT_TIME 5
+    #define FADE_OUT_TIME_SHIFT 4
+    #define FADE_IN_TIME 5
+
+    #define BREATH_ENABLE 1
+    #define BREATH_ENABLE_SHIFT 4
+    #define EXTINGUISH_TIME 0
 
 // Functions:
 

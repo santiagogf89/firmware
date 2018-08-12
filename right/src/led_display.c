@@ -84,6 +84,7 @@ void LedDisplay_SetText(uint8_t length, const char* text)
         }
         allSegmentSets >>= 5;
     }
+    LedSlaveDriver_UpdateLeds(LedDriverId_Left);
 }
 
 void LedDisplay_SetLayer(layer_id_t layerId)
@@ -95,6 +96,7 @@ void LedDisplay_SetLayer(layer_id_t layerId)
     if (layerId >= LayerId_Mod && layerId <= LayerId_Mouse) {
         LedDriverValues[LedDriverId_Left][16 * layerId - 3] = IconsAndLayerTextsBrightness;
     }
+    LedSlaveDriver_UpdateLeds(LedDriverId_Left);
 }
 
 bool LedDisplay_GetIcon(led_display_icon_t icon)
@@ -106,6 +108,7 @@ void LedDisplay_SetIcon(led_display_icon_t icon, bool isEnabled)
 {
     ledIconStates[icon] = isEnabled;
     LedDriverValues[LedDriverId_Left][icon + 8] = isEnabled ? IconsAndLayerTextsBrightness : 0;
+    LedSlaveDriver_UpdateLeds(LedDriverId_Left);
 }
 
 void LedDisplay_UpdateIcons(void)

@@ -168,12 +168,16 @@ static volatile bool wakeUpHostAllowed;
 
 static void suspendUhk(void) {
     SleepModeActive = true;
-    LedSlaveDriver_DisableLeds();
+    for (uint8_t i = 0; i <= LedDriverId_Last; i++) {
+        LedSlaveDriver_DisableLeds(i);
+    }
 }
 
 static void wakeUpUhk(void) {
     SleepModeActive = false;
-    LedSlaveDriver_UpdateLeds();
+    for (uint8_t i = 0; i <= LedDriverId_Last; i++) {
+        LedSlaveDriver_EnableLeds(i);
+    }
 }
 
 void WakeUpHost(void) {
