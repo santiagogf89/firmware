@@ -27,32 +27,32 @@
     } led_driver_id_t;
 
     typedef enum {
-        LedDriverPhase_SetFunctionFrame,
-        LedDriverPhase_SetShutdownModeNormal,
-        LedDriverPhase_SetFrame1,
-        LedDriverPhase_SetFrame2,
-        LedDriverPhase_SetFrame8,
-        LedDriverPhase_InitAutoPlayControlRegister1,
-        LedDriverPhase_InitAutoPlayControlRegister2,
-        LedDriverPhase_InitBreathControlRegister1,
-        LedDriverPhase_InitBreathControlRegister2,
-        LedDriverPhase_InitLedControlRegisters,
-        LedDriverPhase_InitLedValues,
-        LedDriverPhase_UpdateChangedLedValues,
-        LedDriverPhase_SetConfigurationRegisterFadeOut,
-        LedDriverPhase_SetConfigurationRegisterFadeIn,
-        LedDriverPhase_InitLedControlRegistersZero
+        LedDriverPhase_Idle,
+        LedDriverPhase_SetFunctionFrameInit,
+        LedDriverPhase_SetFunctionFrameDisableLeds,
+        LedDriverPhase_SetFunctionFrameEnableLeds,
+        LedDriverPhase_SetShutdownModeNormalInit,
+        LedDriverPhase_SetFrame1Init,
+        LedDriverPhase_SetFrame1EnableLeds,
+        LedDriverPhase_SetFrame1DisableLeds,
+        LedDriverPhase_SetFrame2Init,
+        LedDriverPhase_SetFrame8Init,
+        LedDriverPhase_InitAutoPlayControlRegister1Init,
+        LedDriverPhase_InitAutoPlayControlRegister2Init,
+        LedDriverPhase_InitBreathControlRegister1Init,
+        LedDriverPhase_InitBreathControlRegister2Init,
+        LedDriverPhase_InitLedControlRegistersZero1Init,
+        LedDriverPhase_InitLedControlRegistersZero2Init,
+        LedDriverPhase_InitLedValuesInit,
+        LedDriverPhase_UpdateChangedLedValuesUpdateLeds,
+        LedDriverPhase_SetConfigurationRegisterDisableLeds,
+        LedDriverPhase_SetConfigurationRegisterEnableLeds,
+        LedDriverPhase_InitLedControlRegistersInit
     } led_driver_phase_t;
 
     typedef struct {
-        led_driver_phase_t *phases;
-        uint8_t phaseCount;
-    } led_driver_phase_sequence_t;
-
-    typedef struct {
-        const led_driver_phase_sequence_t *volatile phaseSequence;
         volatile uint8_t phaseSequenceRequests;
-        volatile uint8_t phaseSequenceIndex;
+        volatile led_driver_phase_t phase;
         volatile uint8_t targetLedValues[LED_DRIVER_LED_COUNT];
         volatile uint8_t ledIndex;
         uint8_t i2cAddress;

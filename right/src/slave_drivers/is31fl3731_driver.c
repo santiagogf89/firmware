@@ -13,49 +13,6 @@ enum {
 uint8_t KeyBacklightBrightness = 0xff;
 uint8_t LedDriverValues[LED_DRIVER_MAX_COUNT][LED_DRIVER_LED_COUNT];
 
-const static led_driver_phase_sequence_t ledDriverPhaseSequenceInit = {
-    (led_driver_phase_t []){
-        LedDriverPhase_SetFunctionFrame,
-        LedDriverPhase_SetShutdownModeNormal,
-        LedDriverPhase_InitAutoPlayControlRegister1,
-        LedDriverPhase_InitAutoPlayControlRegister2,
-        LedDriverPhase_InitBreathControlRegister1,
-        LedDriverPhase_InitBreathControlRegister2,
-        LedDriverPhase_SetFrame2,
-        LedDriverPhase_InitLedControlRegistersZero,
-        LedDriverPhase_SetFrame8,
-        LedDriverPhase_InitLedControlRegistersZero,
-        LedDriverPhase_SetFrame1,
-        LedDriverPhase_InitLedControlRegisters,
-        LedDriverPhase_InitLedValues
-    },
-    13
-};
-
-const static led_driver_phase_sequence_t ledDriverPhaseSequenceUpdateLeds = {
-    (led_driver_phase_t []){
-        LedDriverPhase_SetFrame1,
-        LedDriverPhase_UpdateChangedLedValues
-    },
-    2
-};
-
-const static led_driver_phase_sequence_t ledDriverPhaseSequenceDisableLeds = {
-    (led_driver_phase_t []){
-        LedDriverPhase_SetFunctionFrame,
-        LedDriverPhase_SetConfigurationRegisterFadeOut,
-    },
-    2
-};
-
-const static led_driver_phase_sequence_t ledDriverPhaseSequenceEnableLeds = {
-    (led_driver_phase_t []){
-        LedDriverPhase_SetFunctionFrame,
-        LedDriverPhase_SetConfigurationRegisterFadeIn,
-    },
-    2
-};
-
 static led_driver_state_t ledDriverStates[LED_DRIVER_MAX_COUNT] = {
     {
         .i2cAddress = I2C_ADDRESS_IS31FL3731_RIGHT,
@@ -174,56 +131,59 @@ status_t LedSlaveDriver_Update(uint8_t ledDriverId)
     uint8_t ledDriverAddress = currentLedDriverState->i2cAddress;
     uint8_t *ledIndex = &currentLedDriverState->ledIndex;
 
-    if (!currentLedDriverState->phaseSequence) {
-        if (currentLedDriverState->phaseSequenceRequests) {
-            if (currentLedDriverState->phaseSequenceRequests & PhaseSequenceRequest_Init) {
-                currentLedDriverState->phaseSequence = &ledDriverPhaseSequenceInit;
-                currentLedDriverState->phaseSequenceRequests &= ~PhaseSequenceRequest_Init;
-            } else if (currentLedDriverState->phaseSequenceRequests & PhaseSequenceRequest_EnableLeds) {
-                currentLedDriverState->phaseSequence = &ledDriverPhaseSequenceEnableLeds;
-                currentLedDriverState->phaseSequenceRequests &= ~PhaseSequenceRequest_EnableLeds;
-            } else if (currentLedDriverState->phaseSequenceRequests & PhaseSequenceRequest_DisableLeds) {
-                currentLedDriverState->phaseSequence = &ledDriverPhaseSequenceDisableLeds;
-                currentLedDriverState->phaseSequenceRequests &= ~PhaseSequenceRequest_DisableLeds;
-            } else if (currentLedDriverState->phaseSequenceRequests & PhaseSequenceRequest_UpdateLeds) {
-                currentLedDriverState->phaseSequence = &ledDriverPhaseSequenceUpdateLeds;
-                currentLedDriverState->phaseSequenceRequests &= ~PhaseSequenceRequest_UpdateLeds;
-            }
-            currentLedDriverState->phaseSequenceIndex = 0;
-        } else {
-            return kStatus_Uhk_IdleSlave;
-        }
-    }
-
-    switch (currentLedDriverState->phaseSequence->phases[currentLedDriverState->phaseSequenceIndex]) {
-        case LedDriverPhase_SetFunctionFrame:
+    switch (currentLedDriverState->phase) {
+        case LedDriverPhase_SetFunctionFrameInit:
             // if (ledDriverId == LedDriverId_Left && !Slaves[SlaveId_LeftKeyboardHalf].isConnected) {
             //     break;
             // }
             status = I2cAsyncWrite(ledDriverAddress, setFunctionFrameBuffer, sizeof(setFunctionFrameBuffer));
-            ++currentLedDriverState->phaseSequenceIndex;
+            currentLedDriverState->phase = LedDriverPhase_SetShutdownModeNormalInit;
             break;
-        case LedDriverPhase_SetShutdownModeNormal:
+        case LedDriverPhase_SetShutdownModeNormalInit:
             status = I2cAsyncWrite(ledDriverAddress, setShutdownModeNormalBuffer, sizeof(setShutdownModeNormalBuffer));
-            ++currentLedDriverState->phaseSequenceIndex;
+            currentLedDriverState->phase = LedDriverPhase_InitAutoPlayControlRegister1Init;
             break;
-        case LedDriverPhase_SetFrame1:
-            status = I2cAsyncWrite(ledDriverAddress, setFrame1Buffer, sizeof(setFrame1Buffer));
-            ++currentLedDriverState->phaseSequenceIndex;
+        case LedDriverPhase_InitAutoPlayControlRegister1Init:
+            status = I2cAsyncWrite(ledDriverAddress, initAutoPlayControlRegister1Buffer, sizeof(initAutoPlayControlRegister1Buffer));
+            currentLedDriverState->phase = LedDriverPhase_InitAutoPlayControlRegister2Init;
             break;
-        case LedDriverPhase_SetFrame2:
+        case LedDriverPhase_InitAutoPlayControlRegister2Init:
+            status = I2cAsyncWrite(ledDriverAddress, initAutoPlayControlRegister2Buffer, sizeof(initAutoPlayControlRegister2Buffer));
+            currentLedDriverState->phase = LedDriverPhase_InitBreathControlRegister1Init;
+            break;
+        case LedDriverPhase_InitBreathControlRegister1Init:
+            status = I2cAsyncWrite(ledDriverAddress, initBreathControlRegister1Buffer, sizeof(initBreathControlRegister1Buffer));
+            currentLedDriverState->phase = LedDriverPhase_InitBreathControlRegister2Init;
+            break;
+        case LedDriverPhase_InitBreathControlRegister2Init:
+            status = I2cAsyncWrite(ledDriverAddress, initBreathControlRegister2Buffer, sizeof(initBreathControlRegister2Buffer));
+            currentLedDriverState->phase = LedDriverPhase_SetFrame2Init;
+            break;
+        case LedDriverPhase_SetFrame2Init:
             status = I2cAsyncWrite(ledDriverAddress, setFrame2Buffer, sizeof(setFrame2Buffer));
-            ++currentLedDriverState->phaseSequenceIndex;
+            currentLedDriverState->phase = LedDriverPhase_InitLedControlRegistersZero1Init;
             break;
-        case LedDriverPhase_SetFrame8:
+        case LedDriverPhase_InitLedControlRegistersZero1Init:
+            status = I2cAsyncWrite(ledDriverAddress, initLedControlRegistersZeroBuffer, sizeof(initLedControlRegistersZeroBuffer));
+            currentLedDriverState->phase = LedDriverPhase_SetFrame8Init;
+            break;
+        case LedDriverPhase_SetFrame8Init:
             status = I2cAsyncWrite(ledDriverAddress, setFrame8Buffer, sizeof(setFrame8Buffer));
-            ++currentLedDriverState->phaseSequenceIndex;
+            currentLedDriverState->phase = LedDriverPhase_InitLedControlRegistersZero2Init;
             break;
-        case LedDriverPhase_InitLedControlRegisters:
+        case LedDriverPhase_InitLedControlRegistersZero2Init:
+            status = I2cAsyncWrite(ledDriverAddress, initLedControlRegistersZeroBuffer, sizeof(initLedControlRegistersZeroBuffer));
+            currentLedDriverState->phase = LedDriverPhase_SetFrame1Init;
+            break;
+        case LedDriverPhase_SetFrame1Init:
+            status = I2cAsyncWrite(ledDriverAddress, setFrame1Buffer, sizeof(setFrame1Buffer));
+            currentLedDriverState->phase = LedDriverPhase_InitLedControlRegistersInit;
+            break;
+        case LedDriverPhase_InitLedControlRegistersInit:
             status = I2cAsyncWrite(ledDriverAddress, currentLedDriverState->setupLedControlRegistersCommand, LED_CONTROL_REGISTERS_COMMAND_LENGTH);
-            ++currentLedDriverState->phaseSequenceIndex;
+            currentLedDriverState->phase = LedDriverPhase_InitLedValuesInit;
             break;
-        case LedDriverPhase_InitLedValues:
+        case LedDriverPhase_InitLedValuesInit:
             updatePwmRegistersBuffer[0] = FRAME_REGISTER_PWM_FIRST + *ledIndex;
             uint8_t chunkSize = MIN(LED_DRIVER_LED_COUNT - *ledIndex, PMW_REGISTER_UPDATE_CHUNK_SIZE);
             memcpy(updatePwmRegistersBuffer+1, ledValues + *ledIndex, chunkSize);
@@ -232,10 +192,25 @@ status_t LedSlaveDriver_Update(uint8_t ledDriverId)
             if (*ledIndex >= LED_DRIVER_LED_COUNT) {
                 *ledIndex = 0;
                 memcpy(currentLedDriverState->targetLedValues, ledValues, LED_DRIVER_LED_COUNT);
-                ++currentLedDriverState->phaseSequenceIndex;
+                currentLedDriverState->phase = LedDriverPhase_Idle;
             }
             break;
-        case LedDriverPhase_UpdateChangedLedValues: {
+        case LedDriverPhase_Idle:
+            if (currentLedDriverState->phaseSequenceRequests & PhaseSequenceRequest_Init) {
+                currentLedDriverState->phase = LedDriverPhase_SetFunctionFrameInit;
+                currentLedDriverState->phaseSequenceRequests &= ~PhaseSequenceRequest_Init;
+            } else if (currentLedDriverState->phaseSequenceRequests & PhaseSequenceRequest_EnableLeds) {
+                currentLedDriverState->phase = LedDriverPhase_SetFunctionFrameEnableLeds;
+                currentLedDriverState->phaseSequenceRequests &= ~PhaseSequenceRequest_EnableLeds;
+            } else if (currentLedDriverState->phaseSequenceRequests & PhaseSequenceRequest_DisableLeds) {
+                currentLedDriverState->phase = LedDriverPhase_SetFunctionFrameDisableLeds;
+                currentLedDriverState->phaseSequenceRequests &= ~PhaseSequenceRequest_DisableLeds;
+            } else if (currentLedDriverState->phaseSequenceRequests & PhaseSequenceRequest_UpdateLeds) {
+                currentLedDriverState->phase = LedDriverPhase_UpdateChangedLedValuesUpdateLeds;
+                currentLedDriverState->phaseSequenceRequests &= ~PhaseSequenceRequest_UpdateLeds;
+            }
+            break;
+        case LedDriverPhase_UpdateChangedLedValuesUpdateLeds: {
             uint8_t *targetLedValues = currentLedDriverState->targetLedValues;
 
             uint8_t lastLedChunkStartIndex = LED_DRIVER_LED_COUNT - PMW_REGISTER_UPDATE_CHUNK_SIZE;
@@ -255,7 +230,7 @@ status_t LedSlaveDriver_Update(uint8_t ledDriverId)
             bool foundStartIndex = count < LED_DRIVER_LED_COUNT;
             if (!foundStartIndex) {
                 *ledIndex = 0;
-                ++currentLedDriverState->phaseSequenceIndex;
+                currentLedDriverState->phase = LedDriverPhase_Idle;
                 break;
             }
 
@@ -276,42 +251,34 @@ status_t LedSlaveDriver_Update(uint8_t ledDriverId)
             *ledIndex += length;
             if (*ledIndex >= LED_DRIVER_LED_COUNT) {
                 *ledIndex = 0;
-                ++currentLedDriverState->phaseSequenceIndex;
+                currentLedDriverState->phase = LedDriverPhase_Idle;
             }
             break;
         }
-        case LedDriverPhase_InitAutoPlayControlRegister1:
-            status = I2cAsyncWrite(ledDriverAddress, initAutoPlayControlRegister1Buffer, sizeof(initAutoPlayControlRegister1Buffer));
-            ++currentLedDriverState->phaseSequenceIndex;
+        case LedDriverPhase_SetFunctionFrameDisableLeds:
+            status = I2cAsyncWrite(ledDriverAddress, setFunctionFrameBuffer, sizeof(setFunctionFrameBuffer));
+            currentLedDriverState->phase = LedDriverPhase_SetConfigurationRegisterDisableLeds;
             break;
-        case LedDriverPhase_InitAutoPlayControlRegister2:
-            status = I2cAsyncWrite(ledDriverAddress, initAutoPlayControlRegister2Buffer, sizeof(initAutoPlayControlRegister2Buffer));
-            ++currentLedDriverState->phaseSequenceIndex;
-            break;
-        case LedDriverPhase_InitBreathControlRegister1:
-            status = I2cAsyncWrite(ledDriverAddress, initBreathControlRegister1Buffer, sizeof(initBreathControlRegister1Buffer));
-            ++currentLedDriverState->phaseSequenceIndex;
-            break;
-        case LedDriverPhase_InitBreathControlRegister2:
-            status = I2cAsyncWrite(ledDriverAddress, initBreathControlRegister2Buffer, sizeof(initBreathControlRegister2Buffer));
-            ++currentLedDriverState->phaseSequenceIndex;
-            break;
-        case LedDriverPhase_SetConfigurationRegisterFadeOut:
+        case LedDriverPhase_SetConfigurationRegisterDisableLeds:
             status = I2cAsyncWrite(ledDriverAddress, setConfigurationRegisterFadeOutBuffer, sizeof(setConfigurationRegisterFadeOutBuffer));
-            ++currentLedDriverState->phaseSequenceIndex;
+            currentLedDriverState->phase = LedDriverPhase_SetFrame1DisableLeds;
             break;
-        case LedDriverPhase_SetConfigurationRegisterFadeIn:
+        case LedDriverPhase_SetFrame1DisableLeds:
+            status = I2cAsyncWrite(ledDriverAddress, setFrame1Buffer, sizeof(setFrame1Buffer));
+            currentLedDriverState->phase = LedDriverPhase_Idle;
+            break;
+        case LedDriverPhase_SetFunctionFrameEnableLeds:
+            status = I2cAsyncWrite(ledDriverAddress, setFunctionFrameBuffer, sizeof(setFunctionFrameBuffer));
+            currentLedDriverState->phase = LedDriverPhase_SetConfigurationRegisterEnableLeds;
+            break;
+        case LedDriverPhase_SetConfigurationRegisterEnableLeds:
             status = I2cAsyncWrite(ledDriverAddress, setConfigurationRegisterFadeInBuffer, sizeof(setConfigurationRegisterFadeInBuffer));
-            ++currentLedDriverState->phaseSequenceIndex;
+            currentLedDriverState->phase = LedDriverPhase_SetFrame1EnableLeds;
             break;
-        case LedDriverPhase_InitLedControlRegistersZero:
-            status = I2cAsyncWrite(ledDriverAddress, initLedControlRegistersZeroBuffer, sizeof(initLedControlRegistersZeroBuffer));
-            ++currentLedDriverState->phaseSequenceIndex;
+        case LedDriverPhase_SetFrame1EnableLeds:
+            status = I2cAsyncWrite(ledDriverAddress, setFrame1Buffer, sizeof(setFrame1Buffer));
+            currentLedDriverState->phase = LedDriverPhase_Idle;
             break;
-    }
-
-    if (currentLedDriverState->phaseSequenceIndex == currentLedDriverState->phaseSequence->phaseCount) {
-        currentLedDriverState->phaseSequence = NULL;
     }
 
     return status;
