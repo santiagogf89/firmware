@@ -126,9 +126,9 @@ status_t LedSlaveDriver_Update(uint8_t ledDriverId)
 
     switch (currentLedDriverState->phase) {
         case LedDriverPhase_SetFunctionFrameInit:
-            // if (ledDriverId == LedDriverId_Left && !Slaves[SlaveId_LeftKeyboardHalf].isConnected) {
-            //     break;
-            // }
+            if (ledDriverId == LedDriverId_Left && !Slaves[SlaveId_LeftKeyboardHalf].isConnected) {
+                break;
+            }
             status = I2cAsyncWrite(ledDriverAddress, setFunctionFrameBuffer, sizeof(setFunctionFrameBuffer));
             currentLedDriverState->phase = LedDriverPhase_SetShutdownModeNormalInit;
             break;
