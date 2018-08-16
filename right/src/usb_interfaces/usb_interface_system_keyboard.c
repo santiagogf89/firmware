@@ -1,5 +1,4 @@
 #include "usb_composite_device.h"
-#include "usb_report_updater.h"
 
 uint32_t UsbSystemKeyboardActionCounter;
 static usb_system_keyboard_report_t usbSystemKeyboardReports[2];
@@ -43,7 +42,6 @@ usb_status_t UsbSystemKeyboardCallback(class_handle_t handle, uint32_t event, vo
     switch (event) {
         // This event is received when the report has been sent
         case kUSB_DeviceHidEventSendResponse:
-            UsbReportUpdateSemaphore &= ~(1 << USB_SYSTEM_KEYBOARD_INTERFACE_INDEX);
             if (UsbCompositeDevice.attach) {
                 error = kStatus_USB_Success;
             }

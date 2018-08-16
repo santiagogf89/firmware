@@ -26,8 +26,6 @@ static uint16_t DoubleTapSwitchLayerReleaseTimeout = 200;
 static bool activeMouseStates[ACTIVE_MOUSE_STATES_COUNT];
 bool TestUsbStack = false;
 
-volatile uint8_t UsbReportUpdateSemaphore = 0;
-
 mouse_kinetic_state_t MouseMoveState = {
     .isScroll = false,
     .upState = SerializedMouseAction_MoveUp,
@@ -437,10 +435,6 @@ void UpdateUsbReports(void)
         KeyStates[SlotId_RightKeyboardHalf][keyId].current = RightKeyMatrix.keyStates[keyId];
     }
 
-    if (UsbReportUpdateSemaphore && !SleepModeActive) {
-        return;
-    }
-
     UsbReportUpdateCounter++;
 
     ResetActiveUsbBasicKeyboardReport();
@@ -456,32 +450,20 @@ void UpdateUsbReports(void)
     bool HasUsbMouseReportChanged = memcmp(ActiveUsbMouseReport, GetInactiveUsbMouseReport(), sizeof(usb_mouse_report_t)) != 0;
 
     if (HasUsbBasicKeyboardReportChanged) {
-        usb_status_t status = UsbBasicKeyboardAction();
-        if (status == kStatus_USB_Success) {
-            UsbReportUpdateSemaphore |= 1 << USB_BASIC_KEYBOARD_INTERFACE_INDEX;
-        }
+        UsbBasicKeyboardAction();
     }
 
     if (HasUsbMediaKeyboardReportChanged) {
-        usb_status_t status = UsbMediaKeyboardAction();
-        if (status == kStatus_USB_Success) {
-            UsbReportUpdateSemaphore |= 1 << USB_MEDIA_KEYBOARD_INTERFACE_INDEX;
-        }
+        UsbMediaKeyboardAction();
     }
 
     if (HasUsbSystemKeyboardReportChanged) {
-        usb_status_t status = UsbSystemKeyboardAction();
-        if (status == kStatus_USB_Success) {
-            UsbReportUpdateSemaphore |= 1 << USB_SYSTEM_KEYBOARD_INTERFACE_INDEX;
-        }
+        UsbSystemKeyboardAction();
     }
 
     // Send out the mouse position and wheel values continuously if the report is not zeros, but only send the mouse button states when they change.
     if (HasUsbMouseReportChanged || ActiveUsbMouseReport->x || ActiveUsbMouseReport->y ||
             ActiveUsbMouseReport->wheelX || ActiveUsbMouseReport->wheelY) {
-        usb_status_t status = UsbMouseAction();
-        if (status == kStatus_USB_Success) {
-            UsbReportUpdateSemaphore |= 1 << USB_MOUSE_INTERFACE_INDEX;
-        }
+        UsbMouseAction();
     }
 }
