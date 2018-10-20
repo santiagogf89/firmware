@@ -5,6 +5,55 @@ All notable changes to this project will be documented in this file.
 The format is loosely based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to the [UHK Versioning](VERSIONING.md) conventions.
 
+## [8.5.3] - 2018-10-20
+
+Device Protocol: 4.5.0 | Module Protocol: 4.0.0 | User Config: 4.1.0 | Hardware Config: 1.0.0
+
+- Re-enable the I2C watchdog of the left keyboard half which was accidentally disabled starting from firmware 8.4.3. This should fix the freezes of the left keyboard half.
+
+## [8.5.2] - 2018-10-06
+
+Device Protocol: 4.5.0 | Module Protocol: 4.0.0 | User Config: 4.1.0 | Hardware Config: 1.0.0
+
+- Don't suppress keys upon keymap change.
+
+## [8.5.1] - 2018-10-04
+
+Device Protocol: 4.5.0 | Module Protocol: 4.0.0 | User Config: 4.1.0 | Hardware Config: 1.0.0
+
+- Reset UsbReportUpdateSemaphore if it gets stuck for 100ms. This should fix occasional freezes.
+
+## [8.5.0] - 2018-10-04
+
+Device Protocol: 4.**5.0** | Module Protocol: 4.0.0 | User Config: 4.1.0 | Hardware Config: 1.0.0
+
+- Send primary role modifiers consistently.
+- Only allow layer switcher keys to deactivate toggled layers.
+- Deactivate secondary roles when switching keymaps.
+- Use the correct scancode so that commas are outputted for macros.
+- Move the pointer not by 1 but by 5 pixels when testing the USB stack to make the pointer easier to see.
+- Expose UsbReportUpdateSemaphore via UsbCommand_{Get,Set}Variable() `DEVICEPROTOCOL:MINOR`
+- Extract CurrentTime and remove Timer_{Get,Set}CurrentTime()
+
+## [8.4.5] - 2018-08-21
+
+Device Protocol: 4.4.0 | Module Protocol: 4.0.0 | User Config: 4.1.0 | Hardware Config: 1.0.0
+
+- Suppress pressed keys when the layer or keymap changes.
+
+## [8.4.4] - 2018-08-14
+
+Device Protocol: 4.4.0 | Module Protocol: 4.0.0 | User Config: 4.1.0 | Hardware Config: 1.0.0
+
+- Don't wake the host if a key is held down through the beginning of sleep.
+- Ensure that secondary roles are triggered consistently.
+
+## [8.4.3] - 2018-08-12
+
+Device Protocol: 4.4.0 | Module Protocol: 4.0.0 | User Config: 4.1.0 | Hardware Config: 1.0.0
+
+- Compensate "double tap to lock layer" timeouts for the timer fix to make them as long as before 8.3.3
+
 ## [8.4.2] - 2018-08-02
 
 Device Protocol: 4.4.0 | Module Protocol: 4.0.0 | User Config: 4.1.0 | Hardware Config: 1.0.0
@@ -32,6 +81,7 @@ Device Protocol: 4.**4.0** | Module Protocol: 4.0.0 | User Config: 4.1.0 | Hardw
 Device Protocol: 4.3.1 | Module Protocol: 4.0.0 | User Config: 4.1.0 | Hardware Config: 1.0.0
 
 - Implement the macro engine.
+- Fix the timer which makes it tick twice as fast as before.
 - Fix the nondeterministic bug that made USB hang.
 - Restore the Windows related commits of firmware 8.3.1 because the USB hang bug has been fixed.
 - Restore debouncing to 100ms until it gets really fixed.

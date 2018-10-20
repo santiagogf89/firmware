@@ -20,11 +20,12 @@
 static uint32_t mouseUsbReportUpdateTime = 0;
 static uint32_t mouseElapsedTime;
 
-uint16_t DoubleTapSwitchLayerTimeout = 150;
-static uint16_t DoubleTapSwitchLayerReleaseTimeout = 100;
+uint16_t DoubleTapSwitchLayerTimeout = 300;
+static uint16_t DoubleTapSwitchLayerReleaseTimeout = 200;
 
 static bool activeMouseStates[ACTIVE_MOUSE_STATES_COUNT];
 bool TestUsbStack = false;
+static key_action_t actionCache[SLOT_COUNT][MAX_KEY_COUNT_PER_MODULE];
 
 volatile uint8_t UsbReportUpdateSemaphore = 0;
 
@@ -206,13 +207,13 @@ static void handleSwitchLayerAction(key_state_t *keyState, key_action_t *action)
         doubleTapSwitchLayerKey = NULL;
     }
 
+    if (action->type != KeyActionType_SwitchLayer) {
+        return;
+    }
+
     if (!keyState->previous && isLayerDoubleTapToggled && ToggledLayer == action->switchLayer.layer) {
         ToggledLayer = LayerId_Base;
         isLayerDoubleTapToggled = false;
-    }
-
-    if (action->type != KeyActionType_SwitchLayer) {
-        return;
     }
 
     if (keyState->previous && doubleTapSwitchLayerKey == keyState &&
@@ -225,11 +226,11 @@ static void handleSwitchLayerAction(key_state_t *keyState, key_action_t *action)
         if (doubleTapSwitchLayerKey && Timer_GetElapsedTimeAndSetCurrent(&doubleTapSwitchLayerStartTime) < DoubleTapSwitchLayerTimeout) {
             ToggledLayer = action->switchLayer.layer;
             isLayerDoubleTapToggled = true;
-            doubleTapSwitchLayerTriggerTime = Timer_GetCurrentTime();
+            doubleTapSwitchLayerTriggerTime = CurrentTime;
         } else {
             doubleTapSwitchLayerKey = keyState;
         }
-        doubleTapSwitchLayerStartTime = Timer_GetCurrentTime();
+        doubleTapSwitchLayerStartTime = CurrentTime;
     }
 }
 
@@ -237,6 +238,10 @@ static uint8_t basicScancodeIndex = 0;
 static uint8_t mediaScancodeIndex = 0;
 static uint8_t systemScancodeIndex = 0;
 static uint8_t stickyModifiers;
+static uint8_t secondaryRoleState = SecondaryRoleState_Released;
+static uint8_t secondaryRoleSlotId;
+static uint8_t secondaryRoleKeyId;
+static secondary_role_t secondaryRole;
 
 static void applyKeyAction(key_state_t *keyState, key_action_t *action)
 {
@@ -288,6 +293,7 @@ static void applyKeyAction(key_state_t *keyState, key_action_t *action)
         case KeyActionType_SwitchKeymap:
             if (!keyState->previous) {
                 stickyModifiers = 0;
+                secondaryRoleState = SecondaryRoleState_Released;
                 SwitchKeymapById(action->switchKeymap.keymapId);
             }
             break;
@@ -299,11 +305,6 @@ static void applyKeyAction(key_state_t *keyState, key_action_t *action)
             break;
     }
 }
-
-static uint8_t secondaryRoleState = SecondaryRoleState_Released;
-static uint8_t secondaryRoleSlotId;
-static uint8_t secondaryRoleKeyId;
-static secondary_role_t secondaryRole;
 
 static void updateActiveUsbReports(void)
 {
@@ -333,7 +334,6 @@ static void updateActiveUsbReports(void)
     if (layerChanged) {
         stickyModifiers = 0;
     }
-    bool layerGotReleased = layerChanged && activeLayer == LayerId_Base;
     LedDisplay_SetLayer(activeLayer);
 
     if (TestUsbStack) {
@@ -351,32 +351,42 @@ static void updateActiveUsbReports(void)
                 isEvenMedia = !isEvenMedia;
                 ActiveUsbMediaKeyboardReport->scancodes[mediaScancodeIndex++] = isEvenMedia ? MEDIA_VOLUME_DOWN : MEDIA_VOLUME_UP;
             }
-            MouseMoveState.xOut = isEven ? -1 : 1;
+            MouseMoveState.xOut = isEven ? -5 : 5;
         }
     }
 
     for (uint8_t slotId=0; slotId<SLOT_COUNT; slotId++) {
         for (uint8_t keyId=0; keyId<MAX_KEY_COUNT_PER_MODULE; keyId++) {
             key_state_t *keyState = &KeyStates[slotId][keyId];
-            key_action_t *action = &CurrentKeymap[activeLayer][slotId][keyId];
+            key_action_t *action;
 
             if (keyState->debouncing) {
-                if ((uint8_t)(Timer_GetCurrentTime() - keyState->timestamp) > (keyState->previous ? DebounceTimePress : DebounceTimeRelease)) {
+                if ((uint8_t)(CurrentTime - keyState->timestamp) > (keyState->previous ? DebounceTimePress : DebounceTimeRelease)) {
                     keyState->debouncing = false;
                 } else {
                     keyState->current = keyState->previous;
                 }
             } else if (keyState->previous != keyState->current) {
-                keyState->timestamp = Timer_GetCurrentTime();
+                keyState->timestamp = CurrentTime;
                 keyState->debouncing = true;
             }
 
-            if (keyState->current) {
-                key_action_t *baseAction = &CurrentKeymap[LayerId_Base][slotId][keyId];
-                if (layerGotReleased && !(baseAction->type == KeyActionType_Keystroke && baseAction->keystroke.scancode == 0 && baseAction->keystroke.modifiers)) {
-                    keyState->suppressed = true;
+            if (keyState->current && !keyState->previous) {
+                if (SleepModeActive) {
+                    WakeUpHost();
                 }
+                if (secondaryRoleState == SecondaryRoleState_Pressed) {
+                    // Trigger secondary role.
+                    secondaryRoleState = SecondaryRoleState_Triggered;
+                    keyState->current = false;
+                } else {
+                    actionCache[slotId][keyId] = CurrentKeymap[activeLayer][slotId][keyId];
+                }
+            }
 
+            action = &actionCache[slotId][keyId];
+
+            if (keyState->current) {
                 if (action->type == KeyActionType_Keystroke && action->keystroke.secondaryRole) {
                     // Press released secondary role key.
                     if (!keyState->previous && secondaryRoleState == SecondaryRoleState_Released) {
@@ -387,23 +397,16 @@ static void updateActiveUsbReports(void)
                         keyState->suppressed = true;
                     }
                 } else {
-                    // Trigger secondary role.
-                    if (!keyState->previous && secondaryRoleState == SecondaryRoleState_Pressed) {
-                        secondaryRoleState = SecondaryRoleState_Triggered;
-                        keyState->current = false;
-                    } else {
-                        applyKeyAction(keyState, action);
-                    }
+                    applyKeyAction(keyState, action);
                 }
             } else {
-                if (keyState->suppressed) {
-                    keyState->suppressed = false;
-                }
+                keyState->suppressed = false;
 
                 // Release secondary role key.
                 if (keyState->previous && secondaryRoleSlotId == slotId && secondaryRoleKeyId == keyId) {
                     // Trigger primary role.
                     if (secondaryRoleState == SecondaryRoleState_Pressed) {
+                        keyState->previous = false;
                         applyKeyAction(keyState, action);
                     }
                     secondaryRoleState = SecondaryRoleState_Released;
@@ -432,26 +435,21 @@ uint32_t UsbReportUpdateCounter;
 
 void UpdateUsbReports(void)
 {
+    static uint32_t lastUpdateTime;
+
     for (uint8_t keyId = 0; keyId < RIGHT_KEY_MATRIX_KEY_COUNT; keyId++) {
         KeyStates[SlotId_RightKeyboardHalf][keyId].current = RightKeyMatrix.keyStates[keyId];
     }
 
-    if (SleepModeActive) {
-        for (uint8_t slotId = 0; slotId < SLOT_COUNT; slotId++) {
-            for (uint8_t keyId = 0; keyId < MAX_KEY_COUNT_PER_MODULE; keyId++) {
-                if (KeyStates[slotId][keyId].current) {
-                    WakeUpHost();
-                    return;
-                }
-            }
+    if (UsbReportUpdateSemaphore && !SleepModeActive) {
+        if (Timer_GetElapsedTime(&lastUpdateTime) < USB_SEMAPHORE_TIMEOUT) {
+            return;
+        } else {
+            UsbReportUpdateSemaphore = 0;
         }
-        return;
     }
 
-    if (UsbReportUpdateSemaphore) {
-        return;
-    }
-
+    lastUpdateTime = CurrentTime;
     UsbReportUpdateCounter++;
 
     ResetActiveUsbBasicKeyboardReport();

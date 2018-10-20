@@ -12,19 +12,15 @@ If you're one of the brave few who wants to hack the firmware then read on.
 
 `git clone --recursive git@github.com:UltimateHackingKeyboard/firmware.git`
 
-2. Download and install MCUXpresso IDE for [Linux](https://storage.googleapis.com/ugl-static/mcuxpresso-ide/mcuxpressoide-10.1.1_606.x86_64.deb.bin), [Mac](https://storage.googleapis.com/ugl-static/mcuxpresso-ide/MCUXpressoIDE_10.1.1_606.pkg), or [Windows](https://storage.googleapis.com/ugl-static/mcuxpresso-ide/MCUXpressoIDE_10.1.1_606.exe).
+2. Download and install MCUXpresso IDE for [Linux](https://storage.googleapis.com/ugl-static/mcuxpresso-ide/mcuxpressoide-10.2.1_795.x86_64.deb.bin), [Mac](https://storage.googleapis.com/ugl-static/mcuxpresso-ide/MCUXpressoIDE_10.2.1_795.pkg), or [Windows](https://storage.googleapis.com/ugl-static/mcuxpresso-ide/MCUXpressoIDE_10.2.1_795.exe).
 
 3. In the IDE, import the project by invoking *File -> Import -> General -> Existing Projects into Workspace*, select the *left* or *right* directory depending on the desired firmware, then click on the *Finish* button.
 
-## Building and flashing the firmware
+4. In order to be able to flash the firmware via USB from the IDE, you must build [Agent](https://github.com/UltimateHackingKeyboard/agent) which is Git submodule of the this repo and located in the `lib/agent` directory.
 
-For the left keyboard half, make sure to power it via the right keyboard half (which must be powered via USB). Also connect the left keyboard half to your SEGGER J-Link USB debug probe (which must also be connected via USB). Then in KDS, click on *Run -> Run Configurations*, select *GDB SEGGER J-Link Debugging -> uhk60-left_release_jlink*, and click on the *Debug* button.
+5. Finally, in the IDE, click on *Run -> External Tools -> External Tools Configurations*, then select a release firmware to be flashed such as *uhk60-right_release_kboot*, and click on the *Run* button.
 
-For the right keyboard half, flash [the bootloader](https://github.com/UltimateHackingKeyboard/bootloader) first.
-
-At this point, you can flash the right firmware via USB from KDS. To achieve this, you must build [Agent](https://github.com/UltimateHackingKeyboard/agent) that is Git submodule of the this repo and located in the `lib/agent` directory.  Then in KDS, click on *Run -> Run Configurations*, select *C/C++ Application -> uhk60-right_release_kboot*, and click on the *Run* button.
-
-From this point on, you can upgrade the firmwares of both halves via USB by using the uhk60-left_release_kboot and uhk60-right_release_kboot run configurations. Alternatively, you can use your SEGGER J-Link probe.
+Going forward, it's easier to flash the firmware of your choice by using the downwards toolbar icon which is located rightwards of the *green play + toolbox icon*.
 
 ## Contributing
 
