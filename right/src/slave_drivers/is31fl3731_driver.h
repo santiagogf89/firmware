@@ -59,10 +59,10 @@
     } led_driver_phase_t;
 
     typedef struct {
-        volatile bool requests[LedDriverRequest_Last + 1];
-        volatile led_driver_phase_t phase;
-        volatile uint8_t targetLedValues[LED_DRIVER_LED_COUNT];
-        volatile uint8_t ledIndex;
+        bool requests[LedDriverRequest_Last + 1];
+        led_driver_phase_t phase;
+        uint8_t targetLedValues[LED_DRIVER_LED_COUNT];
+        uint8_t ledIndex;
         uint8_t i2cAddress;
         uint8_t setupLedControlRegistersCommand[LED_CONTROL_REGISTERS_COMMAND_LENGTH];
     } led_driver_state_t;

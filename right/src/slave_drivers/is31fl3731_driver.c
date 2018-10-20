@@ -96,7 +96,7 @@ void LedSlaveDriver_DisableLeds(uint8_t ledDriverId)
 
 void LedSlaveDriver_EnableLeds(uint8_t ledDriverId)
 {
-    // ledDriverStates[ledDriverId].requests[LedDriverRequest_EnableLeds] = true;
+    ledDriverStates[ledDriverId].requests[LedDriverRequest_EnableLeds] = true;
 }
 
 void LedSlaveDriver_UpdateLeds(uint8_t ledDriverId)
