@@ -20,8 +20,14 @@ void KeyMatrix_Init(key_matrix_t *keyMatrix)
     }
 }
 
+uint8_t static delay;
 void KeyMatrix_ScanRow(key_matrix_t *keyMatrix)
 {
+    if (delay > 0) {
+        delay--;
+        return;
+    }
+
     uint8_t *keyState = keyMatrix->keyStates + keyMatrix->currentRowNum * keyMatrix->colNum;
     key_matrix_pin_t *row = keyMatrix->rows + keyMatrix->currentRowNum;
 
@@ -39,4 +45,5 @@ void KeyMatrix_ScanRow(key_matrix_t *keyMatrix)
     // This should come last to maintain the strobe for as long as possible to minimize the chance of chatter.
     row = keyMatrix->rows + keyMatrix->currentRowNum;
     GPIO_WritePinOutput(row->gpio, row->pin, 1);
+    delay = 10;
 }
